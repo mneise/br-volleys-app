@@ -144,21 +144,6 @@ public class MainActivity extends Activity {
 			}
 		}
 
-		// BRVolleysNewsParser returns a List (called "entries") of Entry
-		// objects.
-		// Each Entry object represents a single post in the XML feed.
-		// This section processes the entries list to combine each entry with
-		// HTML markup.
-		// Each entry is displayed in the UI as a link that optionally includes
-		// a text summary.
-		// for (Entry entry : entries) {
-		// htmlString.append("<p><a href='");
-		// htmlString.append(entry.link);
-		// htmlString.append("'>" + entry.title + "</a></p>");
-		// htmlString.append(entry.description);
-		// }
-		// String result = htmlString.toString();
-		// return result;
 		return entries;
 	}
 

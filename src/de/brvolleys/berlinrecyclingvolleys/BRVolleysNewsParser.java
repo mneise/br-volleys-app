@@ -14,7 +14,6 @@ import org.jsoup.select.Elements;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import android.text.Html;
 import android.util.Xml;
 
 public class BRVolleysNewsParser {

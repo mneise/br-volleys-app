@@ -16,11 +16,11 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import android.util.Xml;
 
-public class BRVolleysNewsParser {
+public class BRVolleysXmlParser {
 	// We don't use namespaces
     private static final String ns = null;
     
-    public List parse(InputStream in) throws XmlPullParserException, IOException{
+    public List<Entry> parse(InputStream in) throws XmlPullParserException, IOException{
     	try {
     		XmlPullParser parser = Xml.newPullParser();
     		parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
@@ -32,8 +32,8 @@ public class BRVolleysNewsParser {
     	}
     }
     
-    private List readFeed(XmlPullParser parser) throws XmlPullParserException, IOException {
-    	List entries = 	new ArrayList();
+    private List<Entry> readFeed(XmlPullParser parser) throws XmlPullParserException, IOException {
+    	List<Entry> entries = 	new ArrayList<Entry>();
     	
     	parser.require(XmlPullParser.START_TAG, ns, "rss");
 		parser.nextTag();

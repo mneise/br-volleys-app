@@ -22,8 +22,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="de.brvolleys.berlinrecyclingvolleys.DisplayFullArticleActivity"
+            android:label="@string/title_activity_display_full_article" >
+        </activity>
     </application>
-    
+
     <uses-permission android:name="android.permission.INTERNET" />
 
 </manifest>

@@ -1,32 +1,24 @@
 package de.brvolleys.berlinrecyclingvolleys;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.List;
-
-import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Html;
-import android.text.method.LinkMovementMethod;
 import android.view.Menu;
-import android.widget.ImageView;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import de.brvolleys.berlinrecyclingvolleys.BRVolleysNewsParser.Entry;
+import de.brvolleys.berlinrecyclingvolleys.BRVolleysHtmlParser.Entry;
+
+//import de.brvolleys.berlinrecyclingvolleys.BRVolleysXmlParser.Entry;
 
 public class MainActivity extends Activity {
+	public final static String EXTRA_LINK = "de.brvolleys.berlinrecyclingvolleys.LINK";
+	public final static String DOMAIN = "http://www.br-volleys.de";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +27,8 @@ public class MainActivity extends Activity {
 
 		DownloadXmlTask task = new DownloadXmlTask();
 		task.setActivityContext(this);
-		task.execute("http://www.berlin-recycling-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.feed?type=rss");
+		// task.execute("http://www.berlin-recycling-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.feed?type=rss");
+		task.execute("http://br-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.html");
 	}
 
 	@Override
@@ -53,15 +46,10 @@ public class MainActivity extends Activity {
 		}
 
 		@Override
-		protected List<Entry> doInBackground(String... urls) {
-			List<Entry> entries = null;
-			try {
-				entries = loadXmlFromNetwork(urls[0]);
-			} catch (IOException e) {
-				System.err.println("Caught IOException: " + e.getMessage());
-			} catch (XmlPullParserException e) {
-				System.err.println("XmlPullParserException: " + e.getMessage());
-			}
+		protected List doInBackground(String... urls) {
+			List entries = null;
+			BRVolleysHtmlParser parser = new BRVolleysHtmlParser();
+			entries = parser.parse(urls[0]);
 
 			return entries;
 		}
@@ -73,7 +61,7 @@ public class MainActivity extends Activity {
 
 			LinearLayout layout = (LinearLayout) findViewById(R.id.linearlayout);
 
-			if (entries == null) {
+			if (entries == null || entries.isEmpty()) {
 				TextView textView = new TextView(this.context);
 				textView.setTextSize(20);
 				textView.setText("Es konnten keine Nachrichten gefunden werden.");
@@ -82,83 +70,46 @@ public class MainActivity extends Activity {
 
 				for (Entry entry : entries) {
 
+					LinearLayout entrylayout = new LinearLayout(this.context);
+					entrylayout.setOrientation(1);
+					entrylayout.setClickable(true);
+					NewsOnClickListener listener = new NewsOnClickListener(
+							entry.link, this.context);
+					entrylayout.setOnClickListener(listener);
+
+					TextView date = new TextView(this.context);
+					date.setTextSize(20);
+					date.setText(entry.date);
+					entrylayout.addView(date);
+
 					TextView title = new TextView(this.context);
 					title.setTextSize(20);
 					title.setText(entry.title);
-					layout.addView(title);
+					entrylayout.addView(title);
 
-					if (entry.imgsrc != null) {
-						ImageView img = new ImageView(this.context);
-						try {
-							URL url = new URL(entry.imgsrc);
-							Bitmap bmp = BitmapFactory.decodeStream(url
-									.openConnection().getInputStream());
-							img.setImageBitmap(bmp);
-						} catch (MalformedURLException e) {
-							e.printStackTrace();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						layout.addView(img);
-					}
-
-					TextView description = new TextView(this.context);
-					description.setText(entry.description);
-					layout.addView(description);
-
-					TextView link = new TextView(this.context);
-					link.setText(Html.fromHtml("<a href='" + entry.link
-							+ "'>Kompletter Artikel</a>"));
-					link.setMovementMethod(LinkMovementMethod.getInstance());
-					layout.addView(link);
+					layout.addView(entrylayout);
 
 				}
 			}
 		}
 	}
 
-	// Uploads XML, parses it, and combines it with
-	// HTML markup. Returns HTML string.
-	private List<Entry> loadXmlFromNetwork(String urlString)
-			throws XmlPullParserException, IOException {
-		InputStream stream = null;
-		// Instantiate the parser
-		BRVolleysNewsParser newsparser = new BRVolleysNewsParser();
-		List<Entry> entries = null;
-		Calendar rightNow = Calendar.getInstance();
-		DateFormat formatter = new SimpleDateFormat("MMM dd h:mmaa");
+	// Create an anonymous implementation of OnClickListener
+	public class NewsOnClickListener implements OnClickListener {
 
-		StringBuilder htmlString = new StringBuilder();
-		htmlString.append("<h3>News</h3>");
-		htmlString.append("<em>Geladen am: "
-				+ formatter.format(rightNow.getTime()) + "</em>");
+		String link = null;
+		Context context = null;
 
-		try {
-			stream = downloadUrl(urlString);
-			entries = newsparser.parse(stream);
-			// Makes sure that the InputStream is closed after the app is
-			// finished using it.
-		} finally {
-			if (stream != null) {
-				stream.close();
-			}
+		public NewsOnClickListener(String link, Context context) {
+			this.link = link;
+			this.context = context;
 		}
 
-		return entries;
-	}
-
-	// Given a string representation of a URL, sets up a connection and gets
-	// an input stream.
-	private InputStream downloadUrl(String urlString) throws IOException {
-		URL url = new URL(urlString);
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setReadTimeout(10000 /* milliseconds */);
-		conn.setConnectTimeout(15000 /* milliseconds */);
-		conn.setRequestMethod("GET");
-		conn.setDoInput(true);
-		// Starts the query
-		conn.connect();
-		InputStream stream = conn.getInputStream();
-		return stream;
+		public void onClick(View v) {
+			Intent intent = new Intent(this.context,
+					DisplayFullArticleActivity.class);
+			intent.putExtra(EXTRA_LINK, link);
+			startActivity(intent);
+		}
 	}
 }

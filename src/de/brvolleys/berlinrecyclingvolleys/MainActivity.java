@@ -3,6 +3,7 @@ package de.brvolleys.berlinrecyclingvolleys;
 import java.util.List;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -12,22 +13,25 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import de.brvolleys.berlinrecyclingvolleys.BRVolleysHtmlParser.Entry;
+import de.brvolleys.berlinrecyclingvolleys.BRVolleysHtmlParser.ArticleOverviewEntry;
 
 //import de.brvolleys.berlinrecyclingvolleys.BRVolleysXmlParser.Entry;
 
 public class MainActivity extends Activity {
 	public final static String EXTRA_LINK = "de.brvolleys.berlinrecyclingvolleys.LINK";
 	public final static String DOMAIN = "http://www.br-volleys.de";
+	ProgressDialog progressdialog;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		DownloadXmlTask task = new DownloadXmlTask();
+		progressdialog = new ProgressDialog(this);
+		progressdialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+		progressdialog.setMessage(getString(R.string.loading_articles));
+		LoadArticleOverviewTask task = new LoadArticleOverviewTask();
 		task.setActivityContext(this);
-		// task.execute("http://www.berlin-recycling-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.feed?type=rss");
 		task.execute("http://br-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.html");
 	}
 
@@ -38,7 +42,8 @@ public class MainActivity extends Activity {
 		return true;
 	}
 
-	private class DownloadXmlTask extends AsyncTask<String, Void, List<Entry>> {
+	private class LoadArticleOverviewTask extends
+			AsyncTask<String, Void, List<ArticleOverviewEntry>> {
 		Context context = null;
 
 		protected void setActivityContext(Context context) {
@@ -48,27 +53,29 @@ public class MainActivity extends Activity {
 		@Override
 		protected List doInBackground(String... urls) {
 			List entries = null;
-			BRVolleysHtmlParser parser = new BRVolleysHtmlParser();
-			entries = parser.parse(urls[0]);
+			entries = BRVolleysHtmlParser.parseArticleOverview(urls[0]);
 
 			return entries;
 		}
 
 		@Override
-		protected void onPostExecute(List<Entry> entries) {
-			setContentView(R.layout.activity_main);
-			// Displays the HTML string in the UI
+		protected void onPreExecute() {
+			progressdialog.show();
+		}
 
+		@Override
+		protected void onPostExecute(List<ArticleOverviewEntry> entries) {
+			progressdialog.cancel();
 			LinearLayout layout = (LinearLayout) findViewById(R.id.linearlayout);
 
 			if (entries == null || entries.isEmpty()) {
 				TextView textView = new TextView(this.context);
 				textView.setTextSize(20);
-				textView.setText("Es konnten keine Nachrichten gefunden werden.");
+				textView.setText(getString(R.string.no_articles));
 				layout.addView(textView);
 			} else {
 
-				for (Entry entry : entries) {
+				for (ArticleOverviewEntry entry : entries) {
 
 					LinearLayout entrylayout = new LinearLayout(this.context);
 					entrylayout.setOrientation(1);
@@ -94,7 +101,6 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	// Create an anonymous implementation of OnClickListener
 	public class NewsOnClickListener implements OnClickListener {
 
 		String link = null;

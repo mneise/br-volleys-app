@@ -9,8 +9,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
-	
-	public FullArticle parse(InputStream input){
+
+	public FullArticle parse(InputStream input) {
 		Document doc = null;
 		try {
 			doc = Jsoup.parse(input, "UTF-8", "");
@@ -37,6 +37,9 @@ public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 	}
 
 	public FullArticle parse(Document doc) {
+		if (doc == null) {
+			return null;
+		}
 		FullArticle article = null;
 
 		// Get title
@@ -45,7 +48,7 @@ public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 
 		// Get teaser
 		Element content = articleelement.getElementsByClass("content").first();
-		String teaser = content.child(0).text(); 
+		String teaser = content.child(0).text();
 
 		// Get image and image description
 		Element img = content.getElementsByTag("img").first();
@@ -60,7 +63,8 @@ public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 			sb.append(paragraph.text());
 			sb.append("\n\n");
 		}
-		article = new FullArticle(title, teaser, imgsrc, imgdescription, sb.toString());
+		article = new FullArticle(title, teaser, imgsrc, imgdescription,
+				sb.toString());
 
 		return article;
 	}

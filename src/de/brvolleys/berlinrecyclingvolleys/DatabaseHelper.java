@@ -13,7 +13,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 	private static final String TEXT_TYPE = " TEXT";
 	private static final String INTEGER_TYPE = " INTEGER";
-	private static final String BLOB_TYPE = " BLOB";
 	private static final String COMMA_SEP = ",";
 
 	private static final String SQL_CREATE_ARTICLE_OVERVIEW_ENTRIES = "CREATE TABLE "

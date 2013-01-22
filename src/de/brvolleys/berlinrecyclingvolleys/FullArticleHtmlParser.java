@@ -7,6 +7,7 @@ import java.net.URL;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 
@@ -41,30 +42,63 @@ public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 			return null;
 		}
 		FullArticle article = null;
+		String title = null;
+		String teaser = null;
+		String imgsrc = null;
+		String imgdescription = null;
+		String text = null;
 
-		// Get title
-		Element articleelement = doc.getElementsByTag("article").first();
-		String title = articleelement.getElementsByTag("header").first().text();
+		Elements articles = doc.getElementsByTag("article");
+		if (!articles.isEmpty()) {
+			Element articleelement = doc.getElementsByTag("article").first();
 
-		// Get teaser
-		Element content = articleelement.getElementsByClass("content").first();
-		String teaser = content.child(0).text();
+			// Get title
+			Elements header = articleelement.getElementsByTag("header");
+			if (!header.isEmpty()) {
+				title = articleelement.getElementsByTag("header").first()
+						.text();
+			}
 
-		// Get image and image description
-		Element img = content.getElementsByTag("img").first();
-		String imgsrc = ArticleOverviewActivity.DOMAIN + img.attr("src");
-		String imgdescription = img.siblingElements().last().text();
+			// Get teaser
+			Elements contentElements = articleelement
+					.getElementsByClass("content");
+			if (!contentElements.isEmpty()) {
+				Element content = contentElements.first();
+				Element contentChild = content.child(0);
+				if (contentChild != null) {
+					teaser = contentChild.text();
+				}
 
-		// Get article text
-		StringBuilder sb = new StringBuilder();
-		Element articletext = content.getElementsByTag("tbody").last()
-				.getElementsByTag("td").last();
-		for (Element paragraph : articletext.children()) {
-			sb.append(paragraph.text());
-			sb.append("\n\n");
+				// Get image and image description
+				Elements imgs = content.getElementsByTag("img");
+				if (!imgs.isEmpty()) {
+					Element img = imgs.first();
+					imgsrc = ArticleOverviewActivity.DOMAIN + img.attr("src");
+
+					Elements imgSiblings = img.siblingElements();
+					if (!imgSiblings.isEmpty()) {
+						imgdescription = imgSiblings.last().text();
+					}
+				}
+
+				// Get article text
+				StringBuilder sb = new StringBuilder();
+				Elements tBodies = content.getElementsByTag("tbody");
+				if (!tBodies.isEmpty()) {
+					Elements tds = tBodies.last().getElementsByTag("td");
+					if (!tds.isEmpty()) {
+						Element paragraphs = tds.last();
+						for (Element paragraph : paragraphs.children()) {
+							sb.append(paragraph.text());
+							sb.append("\n\n");
+						}
+						text = sb.toString();
+					}
+				}
+			}
 		}
-		article = new FullArticle(title, teaser, imgsrc, imgdescription,
-				sb.toString());
+
+		article = new FullArticle(title, teaser, imgsrc, imgdescription, text);
 
 		return article;
 	}

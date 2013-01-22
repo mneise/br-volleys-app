@@ -8,5 +8,6 @@
     <string name="no_article">Es wurde kein Artikel gefunden.</string>
     <string name="loading_articles">Lade Nachrichten...</string>
     <string name="loading_article">Lade Artikel...</string>
+    <string name="button_load_more_articles">Lade mehr Artikel</string>
     
 </resources>

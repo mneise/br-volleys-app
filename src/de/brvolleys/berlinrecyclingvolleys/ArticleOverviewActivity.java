@@ -10,15 +10,18 @@ import java.util.List;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.SparseArray;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class ArticleOverviewActivity extends Activity implements
@@ -27,9 +30,10 @@ public class ArticleOverviewActivity extends Activity implements
 	public final static String EXTRA_ARTICLE_OVERVIEW_ID = "de.brvolleys.berlinrecyclingvolleys.ARTICLE_ID";
 	public final static String DOMAIN = "http://www.br-volleys.de";
 	private GifWebView mProgressView;
-	private DownloadArticleTask<List<ArticleOverviewEntry>> mTask;
 	private ArticleOverviewEntryDbAdapter mDbHelper;
 	private List<ArticleOverviewEntry> mEntries = new ArrayList<ArticleOverviewEntry>();
+	private SparseArray<String> mPaginationLinks = new SparseArray<String>();
+	private Integer mPageKey = 1;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -41,17 +45,7 @@ public class ArticleOverviewActivity extends Activity implements
 
 		if (isConnected()) {
 
-			LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview_new);
-
-			mProgressView = new GifWebView(this,
-					"file:///android_asset/loading-spinner.html");
-			mProgressView.setLayoutParams(new LayoutParams(
-					LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-			layout.addView(mProgressView);
-
-			// Start AsyncTask
-			mTask = new DownloadArticleTask<List<ArticleOverviewEntry>>(this,
-					new ArticleOverviewHtmlParser());
+			// Start AsyncTask to fetch entries
 			URL url = null;
 			try {
 				url = new URL(
@@ -59,9 +53,15 @@ public class ArticleOverviewActivity extends Activity implements
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			}
-			mTask.execute(url);
+			loadEntriesFromUrl(url);
+
+			// Start AsyncTask to fetch pagination links
+			DownloadPaginationLinksTask downloadPaginationLinksTask = new DownloadPaginationLinksTask(
+					this);
+			downloadPaginationLinksTask.execute(url);
+
 		} else {
-			List<ArticleOverviewEntry> entries = loadEntriesFromDb();
+			List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
 			mEntries.addAll(entries);
 			displayEntries(entries);
 		}
@@ -80,35 +80,36 @@ public class ArticleOverviewActivity extends Activity implements
 		mDbHelper.close();
 	}
 
-	public List<ArticleOverviewEntry> loadEntriesFromDb() {
-		Cursor cursor = mDbHelper.getAllArticleOverviewEntries();
+	public void loadEntriesFromUrl(URL url) {
 
-		List<ArticleOverviewEntry> entries = new ArrayList<ArticleOverviewEntry>();
+		LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_loading_articles);
+		mProgressView = new GifWebView(this,
+				"file:///android_asset/loading-spinner.html");
+		mProgressView.setLayoutParams(new LayoutParams(
+				LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+		layout.addView(mProgressView);
 
-		cursor.moveToFirst();
-		while (!cursor.isAfterLast()) {
-			Integer id = cursor
-					.getInt(cursor
-							.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.ROW_ID));
-			String title = cursor
-					.getString(cursor
-							.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.TITLE));
-			String date = cursor.getString(cursor
-					.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.DATE));
-			String link = cursor.getString(cursor
-					.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.LINK));
-			entries.add(new ArticleOverviewEntry(id, title, link, DateConverter
-					.getDate(date)));
-			cursor.moveToNext();
-		}
-		return entries;
+		DownloadArticleTask<List<ArticleOverviewEntry>> downloadArticleTask = new DownloadArticleTask<List<ArticleOverviewEntry>>(
+				this, new ArticleOverviewHtmlParser());
+		downloadArticleTask.execute(url);
 	}
 
-	public List<ArticleOverviewEntry> getNewEntries(
+	public void loadMoreEntries() {
+		String link = this.mPaginationLinks.get(++mPageKey);
+		URL url = null;
+		try {
+			url = new URL(link);
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+		loadEntriesFromUrl(url);
+	}
+
+	public List<ArticleOverviewEntry> saveNewEntries(
 			List<ArticleOverviewEntry> fetchedEntries,
 			List<ArticleOverviewEntry> savedEntries) {
 		List<ArticleOverviewEntry> newEntries = new ArrayList<ArticleOverviewEntry>();
-		for (ArticleOverviewEntry entry : newEntries) {
+		for (ArticleOverviewEntry entry : fetchedEntries) {
 			if (!savedEntries.contains(entry)) {
 				entry.id = (int) mDbHelper.createArticleOverviewEntry(
 						entry.title, DateConverter.getString(entry.date),
@@ -119,20 +120,19 @@ public class ArticleOverviewActivity extends Activity implements
 		return newEntries;
 	}
 
-	public void displayNewEntries(List<ArticleOverviewEntry> entries) {
-		LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview_new);
-
-		if (entries.size() > 0) {
-			// sort entries by date in descending order
-			Collections.sort(entries);
-			Collections.reverse(entries);
-
-			for (ArticleOverviewEntry entry : entries) {
-				displayEntry(entry, layout);
+	public void enableLoadMoreEntriesButton() {
+		Button button = (Button) findViewById(R.id.button_load_more_entries);
+		button.setVisibility(View.VISIBLE);
+		button.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				loadMoreEntries();
 			}
-		} else {
-			layout.setVisibility(View.GONE);
-		}
+		});
+	}
+
+	public void disableLoadMoreEntriesButton() {
+		Button button = (Button) findViewById(R.id.button_load_more_entries);
+		button.setVisibility(View.GONE);
 	}
 
 	public void displayEntries(List<ArticleOverviewEntry> entries) {
@@ -140,7 +140,7 @@ public class ArticleOverviewActivity extends Activity implements
 		Collections.sort(entries);
 		Collections.reverse(entries);
 
-		LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview_old);
+		LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview);
 
 		for (ArticleOverviewEntry entry : entries) {
 			displayEntry(entry, layout);
@@ -173,20 +173,71 @@ public class ArticleOverviewActivity extends Activity implements
 		layout.addView(entrylayout);
 	}
 
-	public List<ArticleOverviewEntry> removeNotFoundEntries(
+	public List<ArticleOverviewEntry> removeOutdatedEntries(
 			List<ArticleOverviewEntry> savedEntries,
 			List<ArticleOverviewEntry> fetchedEntries) {
 		List<ArticleOverviewEntry> updatedEntries = new ArrayList<ArticleOverviewEntry>();
 		Collections.sort(fetchedEntries);
-		Date lastDate = fetchedEntries.get(0).date;
+		Date oldestDate = fetchedEntries.get(0).date;
 		for (ArticleOverviewEntry entry : savedEntries) {
-			if (!fetchedEntries.contains(entry) & entry.date.after(lastDate)) {
+			if (!fetchedEntries.contains(entry) & entry.date.after(oldestDate)) {
 				mDbHelper.deleteArticleOverviewEntry(entry);
 			} else {
 				updatedEntries.add(entry);
 			}
 		}
 		return updatedEntries;
+	}
+
+	@Override
+	public void onPreExecute() {
+		this.disableLoadMoreEntriesButton();
+		mProgressView.setVisibility(View.VISIBLE);
+		final ScrollView scrollview = (ScrollView) this
+				.findViewById(R.id.scrollview);
+		scrollview.post(new Runnable() {
+			@Override
+			public void run() {
+				Boolean worked = scrollview.fullScroll(View.FOCUS_DOWN);
+				System.out.print(worked);
+			}
+		});
+	}
+
+	@Override
+	public void onPostExecute(List<ArticleOverviewEntry> result) {
+		Collections.sort(result);
+		Date dateAfter = result.get(0).date;
+		Date dateBefore = result.get(result.size() - 1).date;
+
+		List<ArticleOverviewEntry> savedEntries = mDbHelper
+				.getAllEntriesBetweenTwoDates(dateAfter, dateBefore);
+		List<ArticleOverviewEntry> entries = saveNewEntries(result,
+				savedEntries);
+		entries.addAll(removeOutdatedEntries(savedEntries, result));
+		mProgressView.setVisibility(View.GONE);
+		displayEntries(entries);
+		if (mPageKey < mPaginationLinks.size()) {
+			this.enableLoadMoreEntriesButton();
+		}
+	}
+
+	public void onPostExecute(SparseArray<String> links) {
+		this.mPaginationLinks = links;
+	}
+
+	public Boolean cancelTask(AsyncTask task) {
+		task.cancel(true);
+		return task.isCancelled();
+	}
+
+	private Boolean isConnected() {
+		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+		if (networkInfo != null && networkInfo.isConnected()) {
+			return true;
+		}
+		return false;
 	}
 
 	public class ArticleOverviewEntryOnClickListener implements OnClickListener {
@@ -208,33 +259,5 @@ public class ArticleOverviewActivity extends Activity implements
 			intent.putExtra(EXTRA_ARTICLE_OVERVIEW_ID, articleId);
 			startActivity(intent);
 		}
-	}
-
-	@Override
-	public void onPreExecute() {
-		mProgressView.setVisibility(View.VISIBLE);
-	}
-
-	@Override
-	public void onPostExecute(List<ArticleOverviewEntry> result) {
-		List<ArticleOverviewEntry> savedEntries = loadEntriesFromDb();
-		mProgressView.setVisibility(View.GONE);
-		List<ArticleOverviewEntry> entries = getNewEntries(result, savedEntries);
-		entries.addAll(removeNotFoundEntries(savedEntries, result));
-		displayEntries(entries);
-	}
-
-	public Boolean cancelTask() {
-		mTask.cancel(true);
-		return mTask.isCancelled();
-	}
-
-	private Boolean isConnected() {
-		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-		if (networkInfo != null && networkInfo.isConnected()) {
-			return true;
-		}
-		return false;
 	}
 }

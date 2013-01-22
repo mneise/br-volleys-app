@@ -1,5 +1,9 @@
 package de.brvolleys.berlinrecyclingvolleys;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -77,10 +81,54 @@ public class ArticleOverviewEntryDbAdapter {
 	 * 
 	 * @return Cursor over all article overview entries
 	 */
-	public Cursor getAllArticleOverviewEntries() {
+	public List<ArticleOverviewEntry> getAllEntries() {
 
-		return this.mDb.query(TABLE_NAME, new String[] { ROW_ID, TITLE, DATE,
-				LINK }, null, null, null, null, null);
+		Cursor cursor = this.mDb.query(TABLE_NAME, new String[] { ROW_ID,
+				TITLE, DATE, LINK }, null, null, null, null, null);
+
+		List<ArticleOverviewEntry> entries = new ArrayList<ArticleOverviewEntry>();
+
+		cursor.moveToFirst();
+		while (!cursor.isAfterLast()) {
+			Integer id = cursor
+					.getInt(cursor
+							.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.ROW_ID));
+			String title = cursor
+					.getString(cursor
+							.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.TITLE));
+			String date = cursor.getString(cursor
+					.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.DATE));
+			String link = cursor.getString(cursor
+					.getColumnIndexOrThrow(ArticleOverviewEntryDbAdapter.LINK));
+			entries.add(new ArticleOverviewEntry(id, title, link, DateConverter
+					.getDate(date)));
+			cursor.moveToNext();
+		}
+		return entries;
+	}
+
+	public List<ArticleOverviewEntry> getAllEntriesAfter(Date date) {
+		List<ArticleOverviewEntry> allEntries = getAllEntries();
+		List<ArticleOverviewEntry> entries = new ArrayList<ArticleOverviewEntry>();
+		for (ArticleOverviewEntry entry : allEntries) {
+			if (entry.date.after(date) || entry.date.equals(date)) {
+				entries.add(entry);
+			}
+		}
+		return entries;
+	}
+
+	public List<ArticleOverviewEntry> getAllEntriesBetweenTwoDates(
+			Date dateAfter, Date dateBefore) {
+		List<ArticleOverviewEntry> allEntries = getAllEntries();
+		List<ArticleOverviewEntry> entries = new ArrayList<ArticleOverviewEntry>();
+		for (ArticleOverviewEntry entry : allEntries) {
+			if ((entry.date.after(dateAfter) || entry.date.equals(dateAfter))
+					&& (entry.date.before(dateBefore) || entry.date.equals(dateBefore))) {
+				entries.add(entry);
+			}
+		}
+		return entries;
 	}
 
 	/**
@@ -92,7 +140,7 @@ public class ArticleOverviewEntryDbAdapter {
 	public boolean deleteArticleOverviewEntry(ArticleOverviewEntry entry) {
 
 		this.mDb.delete(FullArticleDbAdapter.TABLE_NAME,
-				FullArticleDbAdapter.ROW_ID + "=" + entry.id, null);
+				FullArticleDbAdapter.ARTICLE_OVERVIEW_ID + "=" + entry.id, null);
 		return this.mDb.delete(TABLE_NAME, ROW_ID + "=" + entry.id, null) > 0; //$NON-NLS-1$
 	}
 }

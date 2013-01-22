@@ -4,28 +4,38 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" >
 
-    <LinearLayout
+    <RelativeLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/linear_layout_article_overview"
+        android:id="@+id/relative_layout_article_overview"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical" >
+        android:layout_height="wrap_content" >
 
         <LinearLayout
             xmlns:android="http://schemas.android.com/apk/res/android"
-            android:id="@+id/linear_layout_article_overview_new"
+            android:id="@+id/linear_layout_article_overview"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" >
         </LinearLayout>
 
+        <Button
+            android:id="@+id/button_load_more_entries"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/linear_layout_article_overview"
+            android:layout_centerHorizontal="true"
+            android:text="@string/button_load_more_articles"
+            android:visibility="gone" />
+        
         <LinearLayout
             xmlns:android="http://schemas.android.com/apk/res/android"
-            android:id="@+id/linear_layout_article_overview_old"
+            android:id="@+id/linear_layout_loading_articles"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_below="@id/button_load_more_entries"
             android:orientation="vertical" >
         </LinearLayout>
-    </LinearLayout>
+
+        </RelativeLayout>
 
 </ScrollView>

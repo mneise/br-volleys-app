@@ -43,7 +43,8 @@ public class DownloadPaginationLinksTask extends
 				for (Element child : children) {
 					if (!(child.hasClass("next") || child.hasClass("last"))) {
 						int index = Integer.parseInt(child.text());
-						links.append(index, ArticleOverviewActivity.DOMAIN + child.attr("href"));
+						links.append(index, ArticleOverviewActivity.DOMAIN
+								+ child.attr("href"));
 					}
 				}
 				return links;
@@ -55,6 +56,9 @@ public class DownloadPaginationLinksTask extends
 
 	@Override
 	public void onPostExecute(SparseArray<String> result) {
-		this.mActivity.onPostExecute(result);
+		mActivity.setPaginationLinks(result);
+		if (mActivity.isAllowedToEnableButton()) {
+			mActivity.enableButton();
+		}
 	}
 }

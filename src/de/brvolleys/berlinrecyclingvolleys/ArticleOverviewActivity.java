@@ -19,6 +19,7 @@ import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -29,7 +30,7 @@ public class ArticleOverviewActivity extends Activity implements
 	public final static String EXTRA_LINK = "de.brvolleys.berlinrecyclingvolleys.LINK";
 	public final static String EXTRA_ARTICLE_OVERVIEW_ID = "de.brvolleys.berlinrecyclingvolleys.ARTICLE_ID";
 	public final static String DOMAIN = "http://www.br-volleys.de";
-	private GifWebView mProgressView;
+	private WebView mProgressView;
 	private ArticleOverviewEntryDbAdapter mDbHelper;
 	private List<ArticleOverviewEntry> mEntries = new ArrayList<ArticleOverviewEntry>();
 	private SparseArray<String> mPaginationLinks = new SparseArray<String>();
@@ -82,12 +83,8 @@ public class ArticleOverviewActivity extends Activity implements
 
 	public void loadEntriesFromUrl(URL url) {
 
-		LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_loading_articles);
-		mProgressView = new GifWebView(this,
-				"file:///android_asset/loading-spinner.html");
-		mProgressView.setLayoutParams(new LayoutParams(
-				LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-		layout.addView(mProgressView);
+		mProgressView = (WebView) findViewById(R.id.webview_loading_gif);
+		mProgressView.loadUrl("file:///android_asset/loading-spinner.html");
 
 		DownloadArticleTask<List<ArticleOverviewEntry>> downloadArticleTask = new DownloadArticleTask<List<ArticleOverviewEntry>>(
 				this, new ArticleOverviewHtmlParser());

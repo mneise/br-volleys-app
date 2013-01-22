@@ -26,16 +26,14 @@
             android:layout_centerHorizontal="true"
             android:text="@string/button_load_more_articles"
             android:visibility="gone" />
-        
-        <LinearLayout
-            xmlns:android="http://schemas.android.com/apk/res/android"
-            android:id="@+id/linear_layout_loading_articles"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/button_load_more_entries"
-            android:orientation="vertical" >
-        </LinearLayout>
 
-        </RelativeLayout>
+        <WebView
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/webview_loading_gif"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_below="@id/button_load_more_entries"
+            android:visibility="gone" />
+    </RelativeLayout>
 
 </ScrollView>

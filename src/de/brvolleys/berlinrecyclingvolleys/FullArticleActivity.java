@@ -100,7 +100,6 @@ public class FullArticleActivity extends Activity implements
 		super.onDestroy(); // Always call the superclass method first
 		cancelTask(mDownlaodArticleTask);
 		cancelTask(mDownloadImageTask);
-		mDbHelper.close();
 	}
 
 	@Override

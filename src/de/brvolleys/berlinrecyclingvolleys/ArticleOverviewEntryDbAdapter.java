@@ -33,20 +33,9 @@ public class ArticleOverviewEntryDbAdapter {
 		this.mCtx = ctx;
 	}
 
-	/**
-	 * Open the database. If it cannot be opened, try to create a new instance
-	 * of the database. If it cannot be created, throw an exception to signal
-	 * the failure
-	 * 
-	 * @return this (self reference, allowing this to be chained in an
-	 *         initialization call)
-	 * @throws SQLException
-	 *             if the database could be neither opened or created
-	 */
-	public ArticleOverviewEntryDbAdapter open() throws SQLException {
-		this.mDbHelper = new DatabaseHelper(this.mCtx);
+	public void open() throws SQLException {
+		this.mDbHelper = DatabaseHelper.getInstance(mCtx);
 		this.mDb = this.mDbHelper.getWritableDatabase();
-		return this;
 	}
 
 	/**
@@ -123,7 +112,8 @@ public class ArticleOverviewEntryDbAdapter {
 		List<ArticleOverviewEntry> entries = new ArrayList<ArticleOverviewEntry>();
 		for (ArticleOverviewEntry entry : allEntries) {
 			if ((entry.date.after(dateAfter) || entry.date.equals(dateAfter))
-					&& (entry.date.before(dateBefore) || entry.date.equals(dateBefore))) {
+					&& (entry.date.before(dateBefore) || entry.date
+							.equals(dateBefore))) {
 				entries.add(entry);
 			}
 		}

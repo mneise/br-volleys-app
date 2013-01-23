@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
+	private static DatabaseHelper mInstance = null;
 	// If you change the database schema, you must increment the database
 	// version.
 	public static final int DATABASE_VERSION = 1;
@@ -56,8 +57,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 	private static final String SQL_DELETE_FULL_ARTICLES = "DROP TABLE IF EXISTS "
 			+ FullArticleDbAdapter.TABLE_NAME;
 
-	DatabaseHelper(Context context) {
+	private DatabaseHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
+	}
+	
+	public static DatabaseHelper getInstance(Context context) {
+		if (mInstance == null){
+			mInstance = new DatabaseHelper(context);
+		}
+		return mInstance;
 	}
 
 	@Override

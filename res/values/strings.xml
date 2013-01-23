@@ -9,5 +9,8 @@
     <string name="loading_articles">Lade Nachrichten...</string>
     <string name="loading_article">Lade Artikel...</string>
     <string name="button_load_more_articles">Lade mehr Artikel</string>
-    
+    <string name="cancel">Cancel</string>
+    <string name="dialog_internet_connection_enable">Einstellungen</string>
+    <string name="dialog_internet_connection_message">Aktiviere Internet, um Artikel zu laden.</string>
+    <string name="dialog_internet_connection_title">Keine Internetverbindung</string>
 </resources>

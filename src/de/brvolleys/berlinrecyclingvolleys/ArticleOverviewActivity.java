@@ -27,12 +27,16 @@ public class ArticleOverviewActivity extends Activity {
 	public final static String EXTRA_LINK = "de.brvolleys.berlinrecyclingvolleys.LINK";
 	public final static String EXTRA_ARTICLE_OVERVIEW_ID = "de.brvolleys.berlinrecyclingvolleys.ARTICLE_ID";
 	public final static String DOMAIN = "http://www.br-volleys.de";
+	public final static String START_URL = "http://br-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.html";
 	private List<ArticleOverviewEntry> mEntries = new ArrayList<ArticleOverviewEntry>();
 	private SparseArray<String> mPaginationLinks = new SparseArray<String>();
 	private Integer mPageKey = 1;
 	private ArticleOverviewEntryDbAdapter mDbHelper = null;
 	private WebView mProgressView = null;
 	private Button mButton = null;
+	private Boolean wasConnected = false;
+	private DownloadPaginationLinksTask mDownloadPaginationLinksTask = null;
+	private DownloadArticleTask<List<ArticleOverviewEntry>> mDownloadArticleTask = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -44,8 +48,9 @@ public class ArticleOverviewActivity extends Activity {
 		mDbHelper.open();
 
 		// Initialize mProgressView
-		mProgressView = (WebView) findViewById(R.id.webview_loading_gif);
-		mProgressView.loadUrl("file:///android_asset/loading-spinner.html");
+		mProgressView = (WebView) findViewById(R.id.webview_loading_spinner_entries);
+		mProgressView
+				.loadUrl("file:///android_asset/loading-spinner-overview.html");
 
 		// Initialize mButton
 		mButton = (Button) findViewById(R.id.button_load_more_entries);
@@ -57,20 +62,20 @@ public class ArticleOverviewActivity extends Activity {
 
 		if (isConnected()) {
 
+			wasConnected = true;
+
 			// Start AsyncTask to fetch entries
 			URL url = null;
 			try {
-				url = new URL(
-						"http://br-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.html");
+				url = new URL(START_URL);
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			}
 			loadEntriesFromUrl(url);
 
 			// Start AsyncTask to fetch pagination links
-			DownloadPaginationLinksTask downloadPaginationLinksTask = new DownloadPaginationLinksTask(
-					this);
-			downloadPaginationLinksTask.execute(url);
+			mDownloadPaginationLinksTask = new DownloadPaginationLinksTask(this);
+			mDownloadPaginationLinksTask.execute(url);
 
 		} else {
 			// Load entries from db
@@ -88,8 +93,51 @@ public class ArticleOverviewActivity extends Activity {
 	}
 
 	@Override
+	public void onResume() {
+		super.onResume();
+
+		if (!isConnected() && wasConnected) {
+			wasConnected = false;
+
+			// Remove all previous entries and disable button
+			LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview);
+			layout.removeAllViews();
+			disableButton();
+
+			// Load entries from db
+			List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
+			mEntries.addAll(entries);
+			displayEntries(entries);
+		}
+
+		if (isConnected() && !wasConnected) {
+			wasConnected = true;
+
+			// Remove all previous entries and disable button
+			LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview);
+			layout.removeAllViews();
+
+			// Start AsyncTask to fetch entries
+			URL url = null;
+			try {
+				url = new URL(START_URL);
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+			loadEntriesFromUrl(url);
+
+			// Start AsyncTask to fetch pagination links
+			DownloadPaginationLinksTask downloadPaginationLinksTask = new DownloadPaginationLinksTask(
+					this);
+			downloadPaginationLinksTask.execute(url);
+		}
+	}
+
+	@Override
 	public void onDestroy() {
 		super.onDestroy(); // Always call the superclass method first
+		cancelTask(mDownloadArticleTask);
+		cancelTask(this.mDownloadPaginationLinksTask);
 		mDbHelper.close();
 	}
 
@@ -97,9 +145,9 @@ public class ArticleOverviewActivity extends Activity {
 
 		ArticleOverviewDownloadListener downloadListener = new ArticleOverviewDownloadListener(
 				mDbHelper, this);
-		DownloadArticleTask<List<ArticleOverviewEntry>> downloadArticleTask = new DownloadArticleTask<List<ArticleOverviewEntry>>(
+		mDownloadArticleTask = new DownloadArticleTask<List<ArticleOverviewEntry>>(
 				downloadListener, new ArticleOverviewHtmlParser());
-		downloadArticleTask.execute(url);
+		mDownloadArticleTask.execute(url);
 	}
 
 	public void loadMoreEntries() {
@@ -186,15 +234,18 @@ public class ArticleOverviewActivity extends Activity {
 	}
 
 	public Boolean cancelTask(AsyncTask task) {
-		task.cancel(true);
-		return task.isCancelled();
+		if (task != null) {
+			task.cancel(true);
+			return task.isCancelled();
+		}
+		return true;
 	}
 
 	public void setPaginationLinks(SparseArray<String> paginationLinks) {
 		mPaginationLinks = paginationLinks;
 	}
 
-	private Boolean isConnected() {
+	public Boolean isConnected() {
 		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo networkInfo = cm.getActiveNetworkInfo();
 		if (networkInfo != null && networkInfo.isConnected()) {

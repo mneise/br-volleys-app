@@ -4,24 +4,35 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.Menu;
+import android.view.View;
+import android.webkit.WebView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class FullArticleActivity extends Activity implements
 		DownloadListener<FullArticle> {
-	private ImageView mImageView;
-	private ProgressDialog mProgressDialog;
-	DownloadArticleTask<FullArticle> task;
-	private FullArticleDbAdapter mDbHelper;
-	private FullArticle mArticle;
-	private Integer mArticleOverviewId;
+	private ImageView mImageView = null;
+	private WebView mProgressView = null;
+	private DownloadArticleTask<FullArticle> mDownlaodArticleTask = null;
+	private FullArticleDbAdapter mDbHelper = null;
+	private FullArticle mArticle = null;
+	private Integer mArticleOverviewId = null;
+	private AlertDialog mAlertDialog = null;
+	private String mLink = null;
+	private DownloadImageTask mDownloadImageTask = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -31,9 +42,9 @@ public class FullArticleActivity extends Activity implements
 		mDbHelper = new FullArticleDbAdapter(this);
 		mDbHelper.open();
 
-		// Get the link from the intent
+		// Get link from intent
 		Intent intent = getIntent();
-		String link = intent.getStringExtra(ArticleOverviewActivity.EXTRA_LINK);
+		mLink = intent.getStringExtra(ArticleOverviewActivity.EXTRA_LINK);
 
 		// Get article id
 		mArticleOverviewId = intent.getIntExtra(
@@ -43,21 +54,12 @@ public class FullArticleActivity extends Activity implements
 				.getFullArticleByArticleOverviewId(mArticleOverviewId);
 		if (mArticle == null) {
 
-			// Create ProgressDialog
-			mProgressDialog = new ProgressDialog(this);
-			mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-			mProgressDialog.setMessage(getString(R.string.loading_article));
-
-			// Start AsyncTask
-			task = new DownloadArticleTask<FullArticle>(this,
-					new FullArticleHtmlParser());
-			URL url = null;
-			try {
-				url = new URL(link);
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
+			if (isConnected()) {
+				initializeProgressView();
+				downloadArticle();
+			} else {
+				showDialog();
 			}
-			task.execute(url);
 		} else {
 			displayArticle(mArticle);
 		}
@@ -71,8 +73,21 @@ public class FullArticleActivity extends Activity implements
 	}
 
 	@Override
+	public void onResume() {
+		super.onResume(); // Always call the superclass method first
+		if (mArticle == null && isConnected()) {
+			initializeProgressView();
+			downloadArticle();
+		}
+	}
+
+	@Override
 	public void onPause() {
 		super.onPause(); // Always call the superclass method first
+
+		if (mArticle == null) {
+			return;
+		}
 
 		// if article is not in db, insert article
 		if (mArticle.id == null && mArticleOverviewId != -1) {
@@ -85,7 +100,39 @@ public class FullArticleActivity extends Activity implements
 	@Override
 	public void onDestroy() {
 		super.onDestroy(); // Always call the superclass method first
+		cancelTask(mDownlaodArticleTask);
 		mDbHelper.close();
+	}
+
+	@Override
+	public void onPreExecute() {
+		enableProgressView();
+	}
+
+	@Override
+	public void onPostExecute(FullArticle result) {
+		disableProgressView();
+		displayArticle(result);
+	}
+
+	public void initializeProgressView() {
+		// Initialize mProgressView
+		mProgressView = (WebView) findViewById(R.id.webview_loading_spinner_article);
+		mProgressView
+				.loadUrl("file:///android_asset/loading-spinner-article.html");
+	}
+
+	public void downloadArticle() {
+		// Start AsyncTask
+		mDownlaodArticleTask = new DownloadArticleTask<FullArticle>(this,
+				new FullArticleHtmlParser());
+		URL url = null;
+		try {
+			url = new URL(mLink);
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+		mDownlaodArticleTask.execute(url);
 	}
 
 	public void displayArticle(FullArticle article) {
@@ -114,16 +161,18 @@ public class FullArticleActivity extends Activity implements
 			teaserView.setText(article.teaser);
 			layout.addView(teaserView);
 
-			// Set image
-			mImageView = new ImageView(this);
-			DownloadImageTask task = new DownloadImageTask(this);
-			task.execute(article.imgsrc);
-			layout.addView(mImageView);
+			if (isConnected()) {
+				// Set image
+				mImageView = new ImageView(this);
+				mDownloadImageTask = new DownloadImageTask(this);
+				mDownloadImageTask.execute(article.imgsrc);
+				layout.addView(mImageView);
 
-			// Set imagedescription
-			TextView imgdescriptionView = new TextView(this);
-			imgdescriptionView.setText(article.imgdescription);
-			layout.addView(imgdescriptionView);
+				// Set imagedescription
+				TextView imgdescriptionView = new TextView(this);
+				imgdescriptionView.setText(article.imgdescription);
+				layout.addView(imgdescriptionView);
+			}
 
 			// Set text
 			TextView textView = new TextView(this);
@@ -132,23 +181,57 @@ public class FullArticleActivity extends Activity implements
 		}
 	}
 
+	public void showDialog() {
+		if (mAlertDialog != null && mAlertDialog.isShowing())
+			return;
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.dialog_internet_connection_title);
+		builder.setMessage(R.string.dialog_internet_connection_message);
+		builder.setPositiveButton(R.string.dialog_internet_connection_enable,
+				new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int id) {
+						startActivity(new Intent(
+								Settings.ACTION_WIRELESS_SETTINGS));
+					}
+				}).setNegativeButton(R.string.cancel,
+				new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int id) {
+						dialog.dismiss();
+						finish();
+					}
+				});
+		builder.setCancelable(false);
+		mAlertDialog = builder.create();
+		mAlertDialog.show();
+	}
+
 	public void displayImage(Bitmap image) {
 		mImageView.setImageBitmap(image);
 	}
 
-	@Override
-	public void onPreExecute() {
-		mProgressDialog.show();
+	public void enableProgressView() {
+		mProgressView.setVisibility(View.VISIBLE);
 	}
 
-	@Override
-	public void onPostExecute(FullArticle result) {
-		mProgressDialog.cancel();
-		displayArticle(result);
+	public void disableProgressView() {
+		mProgressView.setVisibility(View.GONE);
 	}
 
-	public Boolean cancelTask() {
-		task.cancel(true);
-		return task.isCancelled();
+	public Boolean cancelTask(AsyncTask task) {
+		if (task != null){
+			task.cancel(true);
+			return task.isCancelled();			
+		}
+		return true;
+	}
+
+	public Boolean isConnected() {
+		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+		if (networkInfo != null && networkInfo.isConnected()) {
+			return true;
+		}
+		return false;
 	}
 }

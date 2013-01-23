@@ -241,6 +241,11 @@ public class ArticleOverviewActivity extends Activity {
 		return true;
 	}
 
+	public Boolean cancelTasks() {
+		return cancelTask(mDownloadArticleTask)
+				&& cancelTask(this.mDownloadPaginationLinksTask);
+	}
+
 	public void setPaginationLinks(SparseArray<String> paginationLinks) {
 		mPaginationLinks = paginationLinks;
 	}

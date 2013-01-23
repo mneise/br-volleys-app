@@ -42,11 +42,11 @@ public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 			return null;
 		}
 		FullArticle article = null;
-		String title = null;
-		String teaser = null;
-		String imgsrc = null;
-		String imgdescription = null;
-		String text = null;
+		String title = "";
+		String teaser = "";
+		String imgsrc = "";
+		String imgdescription = "";
+		String text = "";
 
 		Elements articles = doc.getElementsByTag("article");
 		if (!articles.isEmpty()) {
@@ -82,11 +82,11 @@ public class FullArticleHtmlParser implements HtmlParser<FullArticle> {
 				}
 
 				// Get article text
-				StringBuilder sb = new StringBuilder();
 				Elements tBodies = content.getElementsByTag("tbody");
 				if (!tBodies.isEmpty()) {
 					Elements tds = tBodies.last().getElementsByTag("td");
 					if (!tds.isEmpty()) {
+						StringBuilder sb = new StringBuilder();
 						Element paragraphs = tds.last();
 						for (Element paragraph : paragraphs.children()) {
 							sb.append(paragraph.text());

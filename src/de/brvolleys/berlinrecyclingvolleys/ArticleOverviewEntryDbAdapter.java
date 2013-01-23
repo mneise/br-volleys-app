@@ -66,12 +66,11 @@ public class ArticleOverviewEntryDbAdapter {
 	 * @param link
 	 * @return rowId or -1 if failed
 	 */
-	public long createArticleOverviewEntry(String title, String date,
-			String link) {
+	public long createArticleOverviewEntry(ArticleOverviewEntry entry) {
 		ContentValues initialValues = new ContentValues();
-		initialValues.put(TITLE, title);
-		initialValues.put(DATE, date);
-		initialValues.put(LINK, link);
+		initialValues.put(TITLE, entry.title);
+		initialValues.put(DATE, DateConverter.getString(entry.date));
+		initialValues.put(LINK, entry.link);
 		return this.mDb.insert(TABLE_NAME, null, initialValues);
 	}
 

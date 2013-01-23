@@ -69,15 +69,14 @@ public class FullArticleDbAdapter {
 	 *            article id
 	 * @return rowId or -1 if failed
 	 */
-	public long createFullArticle(String title, String teaser, String imgsrc,
-			String imgDescription, String text, Integer articleOverviewId) {
+	public long createFullArticle(FullArticle article) {
 		ContentValues initialValues = new ContentValues();
-		initialValues.put(TITLE, title);
-		initialValues.put(TEASER, teaser);
-		initialValues.put(IMGSRC, imgsrc);
-		initialValues.put(IMG_DESCRIPTION, imgDescription);
-		initialValues.put(TEXT, text);
-		initialValues.put(ARTICLE_OVERVIEW_ID, articleOverviewId);
+		initialValues.put(TITLE, article.title);
+		initialValues.put(TEASER, article.teaser);
+		initialValues.put(IMGSRC, article.imgsrc);
+		initialValues.put(IMG_DESCRIPTION, article.imgdescription);
+		initialValues.put(TEXT, article.text);
+		initialValues.put(ARTICLE_OVERVIEW_ID, article.articleOverviewId);
 		return this.mDb.insert(TABLE_NAME, null, initialValues);
 	}
 
@@ -89,7 +88,7 @@ public class FullArticleDbAdapter {
 	 * @throws SQLException
 	 *             if article could not be found/retrieved
 	 */
-	public Cursor getFullArticle(long rowId) throws SQLException {
+	public FullArticle getFullArticle(long rowId) throws SQLException {
 
 		Cursor mCursor =
 
@@ -97,19 +96,6 @@ public class FullArticleDbAdapter {
 				IMGSRC, IMG_DESCRIPTION, TEXT }, ROW_ID + "=" + rowId, null,
 				null, null, null, null);
 		if (mCursor != null) {
-			mCursor.moveToFirst();
-		}
-		return mCursor;
-	}
-
-	public FullArticle getFullArticleByArticleOverviewId(
-			Integer articleOverviewId) {
-		Cursor mCursor =
-
-		this.mDb.query(true, TABLE_NAME, new String[] { ROW_ID, TITLE, TEASER,
-				IMGSRC, IMG_DESCRIPTION, TEXT }, ARTICLE_OVERVIEW_ID + "="
-				+ articleOverviewId, null, null, null, null, null);
-		if (mCursor != null & mCursor.getCount() > 0) {
 			mCursor.moveToFirst();
 			String title = mCursor.getString(mCursor
 					.getColumnIndexOrThrow(TITLE));
@@ -122,6 +108,33 @@ public class FullArticleDbAdapter {
 			String text = mCursor
 					.getString(mCursor.getColumnIndexOrThrow(TEXT));
 			return new FullArticle(title, teaser, img, imgdescription, text);
+
+		}
+		return null;
+	}
+
+	public FullArticle getFullArticleByArticleOverviewId(
+			Integer articleOverviewId) {
+		Cursor mCursor =
+
+		this.mDb.query(true, TABLE_NAME, new String[] { ROW_ID, TITLE, TEASER,
+				IMGSRC, IMG_DESCRIPTION, TEXT }, ARTICLE_OVERVIEW_ID + "="
+				+ articleOverviewId, null, null, null, null, null);
+		if (mCursor != null & mCursor.getCount() > 0) {
+			mCursor.moveToFirst();
+			Integer id = mCursor.getInt(mCursor.getColumnIndexOrThrow(ROW_ID));
+			String title = mCursor.getString(mCursor
+					.getColumnIndexOrThrow(TITLE));
+			String teaser = mCursor.getString(mCursor
+					.getColumnIndexOrThrow(TEASER));
+			String img = mCursor.getString(mCursor
+					.getColumnIndexOrThrow(IMGSRC));
+			String imgdescription = mCursor.getString(mCursor
+					.getColumnIndexOrThrow(IMG_DESCRIPTION));
+			String text = mCursor
+					.getString(mCursor.getColumnIndexOrThrow(TEXT));
+			return new FullArticle(id, title, teaser, img, imgdescription,
+					text, articleOverviewId);
 		}
 		return null;
 	}

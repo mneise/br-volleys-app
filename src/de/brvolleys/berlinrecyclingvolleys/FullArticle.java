@@ -1,13 +1,13 @@
 package de.brvolleys.berlinrecyclingvolleys;
 
-
 public class FullArticle {
 	public Integer id = null;
-	public final String title;
-	public final String teaser;
-	public final String imgsrc;
-	public final String imgdescription;
-	public final String text;
+	public String title = "";
+	public String teaser = "";
+	public String imgsrc = "";
+	public String imgdescription = "";
+	public String text = "";
+	public Integer articleOverviewId = -1;
 
 	public FullArticle(String title, String teaser, String imgsrc,
 			String imgdescription, String text) {
@@ -17,7 +17,7 @@ public class FullArticle {
 		this.imgdescription = imgdescription;
 		this.text = text;
 	}
-	
+
 	public FullArticle(Integer id, String title, String teaser, String imgsrc,
 			String imgdescription, String text) {
 		this.id = id;
@@ -27,4 +27,16 @@ public class FullArticle {
 		this.imgdescription = imgdescription;
 		this.text = text;
 	}
+
+	public FullArticle(Integer id, String title, String teaser, String imgsrc,
+			String imgdescription, String text, Integer articleOverviewId) {
+		this.id = id;
+		this.title = title;
+		this.teaser = teaser;
+		this.imgsrc = imgsrc;
+		this.imgdescription = imgdescription;
+		this.text = text;
+		this.articleOverviewId = articleOverviewId;
+	}
+
 }

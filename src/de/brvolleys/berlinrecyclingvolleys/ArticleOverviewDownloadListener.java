@@ -64,9 +64,7 @@ public class ArticleOverviewDownloadListener implements
 		List<ArticleOverviewEntry> newEntries = new ArrayList<ArticleOverviewEntry>();
 		for (ArticleOverviewEntry entry : fetchedEntries) {
 			if (!savedEntries.contains(entry)) {
-				entry.id = (int) mDbHelper.createArticleOverviewEntry(
-						entry.title, DateConverter.getString(entry.date),
-						entry.link);
+				entry.id = (int) mDbHelper.createArticleOverviewEntry(entry);
 				newEntries.add(entry);
 			}
 		}

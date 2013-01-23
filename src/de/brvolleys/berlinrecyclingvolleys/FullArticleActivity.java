@@ -29,10 +29,10 @@ public class FullArticleActivity extends Activity implements
 	private DownloadArticleTask<FullArticle> mDownlaodArticleTask = null;
 	private FullArticleDbAdapter mDbHelper = null;
 	private FullArticle mArticle = null;
-	private Integer mArticleOverviewId = null;
 	private AlertDialog mAlertDialog = null;
 	private String mLink = null;
 	private DownloadImageTask mDownloadImageTask = null;
+	private int mArticleOverviewId = -1;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -90,10 +90,8 @@ public class FullArticleActivity extends Activity implements
 		}
 
 		// if article is not in db, insert article
-		if (mArticle.id == null && mArticleOverviewId != -1) {
-			mArticle.id = (int) mDbHelper.createFullArticle(mArticle.title,
-					mArticle.teaser, mArticle.imgsrc, mArticle.imgdescription,
-					mArticle.text, mArticleOverviewId);
+		if (mArticle.id == null && mArticle.articleOverviewId != -1) {
+			mArticle.id = (int) mDbHelper.createFullArticle(mArticle);
 		}
 	}
 
@@ -101,6 +99,7 @@ public class FullArticleActivity extends Activity implements
 	public void onDestroy() {
 		super.onDestroy(); // Always call the superclass method first
 		cancelTask(mDownlaodArticleTask);
+		cancelTask(mDownloadImageTask);
 		mDbHelper.close();
 	}
 
@@ -112,7 +111,10 @@ public class FullArticleActivity extends Activity implements
 	@Override
 	public void onPostExecute(FullArticle result) {
 		disableProgressView();
-		displayArticle(result);
+		if (result != null) {
+			result.articleOverviewId = mArticleOverviewId;
+			displayArticle(result);
+		}
 	}
 
 	public void initializeProgressView() {
@@ -161,7 +163,7 @@ public class FullArticleActivity extends Activity implements
 			teaserView.setText(article.teaser);
 			layout.addView(teaserView);
 
-			if (isConnected()) {
+			if (isConnected() && article.imgsrc.length() > 0) {
 				// Set image
 				mImageView = new ImageView(this);
 				mDownloadImageTask = new DownloadImageTask(this);
@@ -207,7 +209,9 @@ public class FullArticleActivity extends Activity implements
 	}
 
 	public void displayImage(Bitmap image) {
-		mImageView.setImageBitmap(image);
+		if (image != null) {
+			mImageView.setImageBitmap(image);
+		}
 	}
 
 	public void enableProgressView() {
@@ -219,11 +223,16 @@ public class FullArticleActivity extends Activity implements
 	}
 
 	public Boolean cancelTask(AsyncTask task) {
-		if (task != null){
+		if (task != null) {
 			task.cancel(true);
-			return task.isCancelled();			
+			return task.isCancelled();
 		}
 		return true;
+	}
+
+	public Boolean cancelTasks() {
+		return cancelTask(mDownlaodArticleTask)
+				&& cancelTask(mDownloadImageTask);
 	}
 
 	public Boolean isConnected() {

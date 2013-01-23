@@ -2,11 +2,15 @@ package de.brvolleys.berlinrecyclingvolleys;
 
 import java.util.Date;
 
-public class ArticleOverviewEntry implements Comparable<ArticleOverviewEntry> {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class ArticleOverviewEntry implements Comparable<ArticleOverviewEntry>,
+		Parcelable {
 	public Integer id = null;
-	public final String title;
-	public final String link;
-	public final Date date;
+	public String title;
+	public String link;
+	public Date date;
 
 	/**
 	 * @param title
@@ -30,6 +34,13 @@ public class ArticleOverviewEntry implements Comparable<ArticleOverviewEntry> {
 		this.title = title;
 		this.link = link;
 		this.date = date;
+	}
+
+	private ArticleOverviewEntry(Parcel in) {
+		this.id = in.readInt();
+		this.title = in.readString();
+		this.link = in.readString();
+		this.date = DateConverter.getDate(in.readString());
 	}
 
 	@Override
@@ -72,5 +83,29 @@ public class ArticleOverviewEntry implements Comparable<ArticleOverviewEntry> {
 		} else if (!title.equals(other.title))
 			return false;
 		return true;
+	}
+
+	public static final Parcelable.Creator<ArticleOverviewEntry> CREATOR = new Parcelable.Creator<ArticleOverviewEntry>() {
+		public ArticleOverviewEntry createFromParcel(Parcel in) {
+			return new ArticleOverviewEntry(in);
+		}
+
+		public ArticleOverviewEntry[] newArray(int size) {
+			return new ArticleOverviewEntry[size];
+		}
+	};
+
+	@Override
+	public int describeContents() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel dest, int flags) {
+		dest.writeInt(id);
+		dest.writeString(title);
+		dest.writeString(link);
+		dest.writeString(DateConverter.getString(date));
 	}
 }

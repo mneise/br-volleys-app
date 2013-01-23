@@ -13,7 +13,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.SparseArray;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -28,13 +27,13 @@ public class ArticleOverviewActivity extends Activity {
 	public final static String EXTRA_ARTICLE_OVERVIEW_ID = "de.brvolleys.berlinrecyclingvolleys.ARTICLE_ID";
 	public final static String DOMAIN = "http://www.br-volleys.de";
 	public final static String START_URL = "http://br-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.html";
-	private List<ArticleOverviewEntry> mEntries = new ArrayList<ArticleOverviewEntry>();
-	private SparseArray<String> mPaginationLinks = new SparseArray<String>();
-	private Integer mPageKey = 1;
+
+	private List<ArticleOverviewEntry> mEntries = null;
+	private String[] mPaginationLinks = null;
+	private Integer mPageKey = 0;
 	private ArticleOverviewEntryDbAdapter mDbHelper = null;
 	private WebView mProgressView = null;
 	private Button mButton = null;
-	private Boolean wasConnected = false;
 	private DownloadPaginationLinksTask mDownloadPaginationLinksTask = null;
 	private DownloadArticleTask<List<ArticleOverviewEntry>> mDownloadArticleTask = null;
 
@@ -60,28 +59,43 @@ public class ArticleOverviewActivity extends Activity {
 			}
 		});
 
-		if (isConnected()) {
-
-			wasConnected = true;
-
-			// Start AsyncTask to fetch entries
-			URL url = null;
-			try {
-				url = new URL(START_URL);
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			}
-			loadEntriesFromUrl(url);
-
-			// Start AsyncTask to fetch pagination links
-			mDownloadPaginationLinksTask = new DownloadPaginationLinksTask(this);
-			mDownloadPaginationLinksTask.execute(url);
-
-		} else {
-			// Load entries from db
-			List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
-			mEntries.addAll(entries);
+		// Check whether we're recreating a previously destroyed instance
+		if (savedInstanceState != null) {
+			// Restore value of members from saved state
+			List<ArticleOverviewEntry> entries = savedInstanceState
+					.getParcelableArrayList("entries");
+			addNewEntries(entries);
 			displayEntries(entries);
+			Integer buttonVisibility = savedInstanceState
+					.getInt("buttonVisibility");
+			mButton.setVisibility(buttonVisibility);
+			mPaginationLinks = savedInstanceState
+					.getStringArray("paginationLinks");
+			mPageKey = savedInstanceState.getInt("pageKey");
+		} else {
+
+			if (isConnected()) {
+
+				// Start AsyncTask to fetch entries
+				URL url = null;
+				try {
+					url = new URL(START_URL);
+				} catch (MalformedURLException e) {
+					e.printStackTrace();
+				}
+				loadEntriesFromUrl(url);
+
+				// Start AsyncTask to fetch pagination links
+				mDownloadPaginationLinksTask = new DownloadPaginationLinksTask(
+						this);
+				mDownloadPaginationLinksTask.execute(url);
+
+			} else {
+				// Load entries from db
+				List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
+				addNewEntries(entries);
+				displayEntries(entries);
+			}
 		}
 	}
 
@@ -95,42 +109,6 @@ public class ArticleOverviewActivity extends Activity {
 	@Override
 	public void onResume() {
 		super.onResume();
-
-		if (!isConnected() && wasConnected) {
-			wasConnected = false;
-
-			// Remove all previous entries and disable button
-			LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview);
-			layout.removeAllViews();
-			disableButton();
-
-			// Load entries from db
-			List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
-			mEntries.addAll(entries);
-			displayEntries(entries);
-		}
-
-		if (isConnected() && !wasConnected) {
-			wasConnected = true;
-
-			// Remove all previous entries and disable button
-			LinearLayout layout = (LinearLayout) findViewById(R.id.linear_layout_article_overview);
-			layout.removeAllViews();
-
-			// Start AsyncTask to fetch entries
-			URL url = null;
-			try {
-				url = new URL(START_URL);
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			}
-			loadEntriesFromUrl(url);
-
-			// Start AsyncTask to fetch pagination links
-			DownloadPaginationLinksTask downloadPaginationLinksTask = new DownloadPaginationLinksTask(
-					this);
-			downloadPaginationLinksTask.execute(url);
-		}
 	}
 
 	@Override
@@ -139,6 +117,19 @@ public class ArticleOverviewActivity extends Activity {
 		cancelTask(mDownloadArticleTask);
 		cancelTask(this.mDownloadPaginationLinksTask);
 		mDbHelper.close();
+	}
+
+	@Override
+	public void onSaveInstanceState(Bundle savedInstanceState) {
+		super.onSaveInstanceState(savedInstanceState);
+		// Save UI state changes to the savedInstanceState.
+		// This bundle will be passed to onCreate if the process is
+		// killed and restarted.
+		savedInstanceState.putParcelableArrayList("entries",
+				(ArrayList<ArticleOverviewEntry>) mEntries);
+		savedInstanceState.putInt("buttonVisibility", mButton.getVisibility());
+		savedInstanceState.putStringArray("paginationLinks", mPaginationLinks);
+		savedInstanceState.putInt("pageKey", mPageKey);
 	}
 
 	public void loadEntriesFromUrl(URL url) {
@@ -151,7 +142,7 @@ public class ArticleOverviewActivity extends Activity {
 	}
 
 	public void loadMoreEntries() {
-		String link = mPaginationLinks.get(++mPageKey);
+		String link = mPaginationLinks[++mPageKey];
 		URL url = null;
 		try {
 			url = new URL(link);
@@ -210,9 +201,11 @@ public class ArticleOverviewActivity extends Activity {
 	}
 
 	public Boolean isAllowedToEnableButton() {
-		if (mPageKey < mPaginationLinks.size()
-				&& mProgressView.getVisibility() != View.VISIBLE) {
-			return true;
+		if (mPaginationLinks != null) {
+			if (mPageKey < mPaginationLinks.length - 1
+					&& mProgressView.getVisibility() != View.VISIBLE) {
+				return true;
+			}
 		}
 		return false;
 	}
@@ -246,8 +239,15 @@ public class ArticleOverviewActivity extends Activity {
 				&& cancelTask(this.mDownloadPaginationLinksTask);
 	}
 
-	public void setPaginationLinks(SparseArray<String> paginationLinks) {
+	public void setPaginationLinks(String[] paginationLinks) {
 		mPaginationLinks = paginationLinks;
+	}
+
+	public void addNewEntries(List<ArticleOverviewEntry> entries) {
+		if (mEntries == null) {
+			mEntries = new ArrayList<ArticleOverviewEntry>();
+		}
+		mEntries.addAll(entries);
 	}
 
 	public Boolean isConnected() {

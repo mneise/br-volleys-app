@@ -35,6 +35,7 @@ public class ArticleOverviewDownloadListener implements
 		List<ArticleOverviewEntry> entries = saveNewEntries(result,
 				savedEntries);
 		entries.addAll(removeOutdatedEntries(savedEntries, result));
+		mActivity.addNewEntries(entries);
 		mActivity.disableProgressView();
 		mActivity.displayEntries(entries);
 		if (mActivity.isAllowedToEnableButton()) {

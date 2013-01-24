@@ -42,7 +42,7 @@ public class ArticleOverviewEntryDbAdapter {
 	 * close return type: void
 	 */
 	public void close() {
-		this.mDbHelper.close();
+		mDbHelper.close();
 	}
 
 	/**
@@ -56,11 +56,14 @@ public class ArticleOverviewEntryDbAdapter {
 	 * @return rowId or -1 if failed
 	 */
 	public long createArticleOverviewEntry(ArticleOverviewEntry entry) {
+		open();
 		ContentValues initialValues = new ContentValues();
 		initialValues.put(TITLE, entry.title);
 		initialValues.put(DATE, DateConverter.getString(entry.date));
 		initialValues.put(LINK, entry.link);
-		return this.mDb.insert(TABLE_NAME, null, initialValues);
+		long id = mDb.insert(TABLE_NAME, null, initialValues);
+		close();
+		return id;
 	}
 
 	/**
@@ -71,8 +74,9 @@ public class ArticleOverviewEntryDbAdapter {
 	 */
 	public List<ArticleOverviewEntry> getAllEntries() {
 
-		Cursor cursor = this.mDb.query(TABLE_NAME, new String[] { ROW_ID,
-				TITLE, DATE, LINK }, null, null, null, null, null);
+		open();
+		Cursor cursor = mDb.query(TABLE_NAME, new String[] { ROW_ID, TITLE,
+				DATE, LINK }, null, null, null, null, null);
 
 		List<ArticleOverviewEntry> entries = new ArrayList<ArticleOverviewEntry>();
 
@@ -92,6 +96,7 @@ public class ArticleOverviewEntryDbAdapter {
 					.getDate(date)));
 			cursor.moveToNext();
 		}
+		close();
 		return entries;
 	}
 
@@ -128,8 +133,11 @@ public class ArticleOverviewEntryDbAdapter {
 	 */
 	public boolean deleteArticleOverviewEntry(ArticleOverviewEntry entry) {
 
-		this.mDb.delete(FullArticleDbAdapter.TABLE_NAME,
+		open();
+		mDb.delete(FullArticleDbAdapter.TABLE_NAME,
 				FullArticleDbAdapter.ARTICLE_OVERVIEW_ID + "=" + entry.id, null);
-		return this.mDb.delete(TABLE_NAME, ROW_ID + "=" + entry.id, null) > 0; //$NON-NLS-1$
+		boolean success = mDb.delete(TABLE_NAME, ROW_ID + "=" + entry.id, null) > 0;
+		close();
+		return success;
 	}
 }

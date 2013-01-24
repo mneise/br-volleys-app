@@ -59,6 +59,7 @@ public class FullArticleDbAdapter {
 	 * @return rowId or -1 if failed
 	 */
 	public long createFullArticle(FullArticle article) {
+		open();
 		ContentValues initialValues = new ContentValues();
 		initialValues.put(TITLE, article.title);
 		initialValues.put(TEASER, article.teaser);
@@ -66,7 +67,9 @@ public class FullArticleDbAdapter {
 		initialValues.put(IMG_DESCRIPTION, article.imgdescription);
 		initialValues.put(TEXT, article.text);
 		initialValues.put(ARTICLE_OVERVIEW_ID, article.articleOverviewId);
-		return this.mDb.insert(TABLE_NAME, null, initialValues);
+		long id = mDb.insert(TABLE_NAME, null, initialValues);
+		close();
+		return id;
 	}
 
 	/**
@@ -78,6 +81,7 @@ public class FullArticleDbAdapter {
 	 *             if article could not be found/retrieved
 	 */
 	public FullArticle getFullArticle(long rowId) throws SQLException {
+		open();
 
 		Cursor mCursor =
 
@@ -96,14 +100,17 @@ public class FullArticleDbAdapter {
 					.getColumnIndexOrThrow(IMG_DESCRIPTION));
 			String text = mCursor
 					.getString(mCursor.getColumnIndexOrThrow(TEXT));
+			close();
 			return new FullArticle(title, teaser, img, imgdescription, text);
 
 		}
+		close();
 		return null;
 	}
 
 	public FullArticle getFullArticleByArticleOverviewId(
 			Integer articleOverviewId) {
+		open();
 		Cursor mCursor =
 
 		this.mDb.query(true, TABLE_NAME, new String[] { ROW_ID, TITLE, TEASER,
@@ -122,9 +129,11 @@ public class FullArticleDbAdapter {
 					.getColumnIndexOrThrow(IMG_DESCRIPTION));
 			String text = mCursor
 					.getString(mCursor.getColumnIndexOrThrow(TEXT));
+			close();
 			return new FullArticle(id, title, teaser, img, imgdescription,
 					text, articleOverviewId);
 		}
+		close();
 		return null;
 	}
 }

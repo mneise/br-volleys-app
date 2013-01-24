@@ -40,7 +40,6 @@ public class FullArticleActivity extends Activity implements
 		setContentView(R.layout.activity_full_article);
 
 		mDbHelper = new FullArticleDbAdapter(this);
-		mDbHelper.open();
 
 		// Get link from intent
 		Intent intent = getIntent();

@@ -44,7 +44,6 @@ public class ArticleOverviewActivity extends Activity {
 
 		// Initialize mDbHelper
 		mDbHelper = new ArticleOverviewEntryDbAdapter(this);
-		mDbHelper.open();
 
 		// Initialize mProgressView
 		mProgressView = (WebView) findViewById(R.id.webview_loading_spinner_entries);
@@ -116,7 +115,6 @@ public class ArticleOverviewActivity extends Activity {
 		super.onDestroy(); // Always call the superclass method first
 		cancelTask(mDownloadArticleTask);
 		cancelTask(this.mDownloadPaginationLinksTask);
-		mDbHelper.close();
 	}
 
 	@Override

@@ -18,21 +18,21 @@
             android:orientation="vertical" >
         </LinearLayout>
 
+        <WebView
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/webview_loading_spinner_article_overview"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_below="@id/linear_layout_article_overview"
+            android:visibility="gone" />
+
         <Button
             android:id="@+id/button_load_more_entries"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/linear_layout_article_overview"
+            android:layout_below="@id/webview_loading_spinner_article_overview"
             android:layout_centerHorizontal="true"
             android:text="@string/button_load_more_articles"
-            android:visibility="gone" />
-
-        <WebView
-            xmlns:android="http://schemas.android.com/apk/res/android"
-            android:id="@+id/webview_loading_spinner_entries"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:layout_below="@id/button_load_more_entries"
             android:visibility="gone" />
     </RelativeLayout>
 

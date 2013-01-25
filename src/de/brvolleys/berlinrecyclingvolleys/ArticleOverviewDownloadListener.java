@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import de.brvolleys.berlinrecyclingvolleys.ArticleOverviewActivity.State;
+
 public class ArticleOverviewDownloadListener implements
 		DownloadListener<List<ArticleOverviewEntry>> {
 	private ArticleOverviewEntryDbAdapter mDbHelper = null;
@@ -19,6 +21,7 @@ public class ArticleOverviewDownloadListener implements
 
 	@Override
 	public void onPreExecute() {
+		mActivity.state = State.LOADING;
 		mActivity.disableButton();
 		mActivity.enableProgressView();
 		mActivity.scrollDown();
@@ -41,6 +44,7 @@ public class ArticleOverviewDownloadListener implements
 		if (mActivity.isAllowedToEnableButton()) {
 			mActivity.enableButton();
 		}
+		mActivity.state = State.WAITING;
 	}
 
 	public List<ArticleOverviewEntry> removeOutdatedEntries(

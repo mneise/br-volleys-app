@@ -11,7 +11,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-public class ArticleOverviewHtmlParser implements HtmlParser<List<ArticleOverviewEntry>> {
+import android.util.Log;
+
+public class ArticleOverviewHtmlParser implements
+		HtmlParser<List<ArticleOverviewEntry>> {
+	private static final String TAG = "ArticleOverviewHtmlParser";
 
 	public List<ArticleOverviewEntry> parse(String htmlContent) {
 		return parse(Jsoup.parse(htmlContent));
@@ -19,17 +23,23 @@ public class ArticleOverviewHtmlParser implements HtmlParser<List<ArticleOvervie
 
 	@Override
 	public List<ArticleOverviewEntry> parse(URL url) {
+		Log.v(TAG, "Url: " + url);
 
 		Document doc = null;
 		try {
-			doc = Jsoup.connect(url.toString()).get();
+			doc = Jsoup.connect(url.toString()).timeout(5*1000).get();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		Log.v(TAG, "Doc: " + doc);
 		return parse(doc);
 	}
 
 	private List<ArticleOverviewEntry> parse(Document doc) {
+		Log.v(TAG, "Doc " + doc);
+		if (doc == null) {
+			return null;
+		}
 		// Get archive table
 		Elements archiveTables = doc.getElementsByClass("zebra");
 		List<ArticleOverviewEntry> articleEntries = new ArrayList<ArticleOverviewEntry>();

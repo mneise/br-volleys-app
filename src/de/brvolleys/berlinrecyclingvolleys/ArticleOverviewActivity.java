@@ -13,6 +13,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -23,6 +24,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class ArticleOverviewActivity extends Activity {
+	private static final String TAG = "ArticleOverviewActivity";
 	public final static String EXTRA_LINK = "de.brvolleys.berlinrecyclingvolleys.LINK";
 	public final static String EXTRA_ARTICLE_OVERVIEW_ID = "de.brvolleys.berlinrecyclingvolleys.ARTICLE_ID";
 	public final static String DOMAIN = "http://www.br-volleys.de";
@@ -36,6 +38,12 @@ public class ArticleOverviewActivity extends Activity {
 	private Button mButton = null;
 	private DownloadPaginationLinksTask mDownloadPaginationLinksTask = null;
 	private DownloadArticleTask<List<ArticleOverviewEntry>> mDownloadArticleTask = null;
+
+	public enum State {
+		LOADING, WAITING
+	}
+
+	public State state = State.LOADING;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -54,47 +62,54 @@ public class ArticleOverviewActivity extends Activity {
 		mButton = (Button) findViewById(R.id.button_load_more_entries);
 		mButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				loadMoreEntries();
+				URL url = getUrl(mPaginationLinks[++mPageKey]);
+				loadEntriesFromUrl(url);
 			}
 		});
 
-		// Check whether we're recreating a previously destroyed instance
 		if (savedInstanceState != null) {
-			// Restore value of members from saved state
-			List<ArticleOverviewEntry> entries = savedInstanceState
-					.getParcelableArrayList("entries");
-			addNewEntries(entries);
-			displayEntries(entries);
-			Integer buttonVisibility = savedInstanceState
-					.getInt("buttonVisibility");
-			mButton.setVisibility(buttonVisibility);
+			mEntries = savedInstanceState.getParcelableArrayList("mEntries");
 			mPaginationLinks = savedInstanceState
-					.getStringArray("paginationLinks");
-			mPageKey = savedInstanceState.getInt("pageKey");
-		} else {
+					.getStringArray("mPaginationLinks");
+			mPageKey = savedInstanceState.getInt("mPageKey");
+			state = Enum.valueOf(State.class,
+					savedInstanceState.getString("state"));
+		}
 
-			if (isConnected()) {
+		if (isConnected()) {
 
-				// Start AsyncTask to fetch entries
-				URL url = null;
-				try {
-					url = new URL(START_URL);
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-				}
-				loadEntriesFromUrl(url);
-
+			URL startUrl = getUrl(START_URL);
+			if (mPaginationLinks == null) {
 				// Start AsyncTask to fetch pagination links
 				mDownloadPaginationLinksTask = new DownloadPaginationLinksTask(
 						this);
-				mDownloadPaginationLinksTask.execute(url);
-
-			} else {
-				// Load entries from db
-				List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
-				addNewEntries(entries);
-				displayEntries(entries);
+				mDownloadPaginationLinksTask.execute(startUrl);
 			}
+
+			switch (state) {
+			case LOADING:
+				if (mEntries == null) {
+					// Start AsyncTask to fetch entries
+					loadEntriesFromUrl(startUrl);
+				} else {
+					displayEntries(mEntries);
+					URL url = getUrl(mPaginationLinks[mPageKey]);
+					loadEntriesFromUrl(url);
+				}
+				break;
+			case WAITING:
+				displayEntries(mEntries);
+				if (isAllowedToEnableButton()) {
+					enableButton();
+				}
+				break;
+			}
+
+		} else {
+			// Load entries from db
+			List<ArticleOverviewEntry> entries = mDbHelper.getAllEntries();
+			addNewEntries(entries);
+			displayEntries(entries);
 		}
 	}
 
@@ -119,35 +134,25 @@ public class ArticleOverviewActivity extends Activity {
 
 	@Override
 	public void onSaveInstanceState(Bundle savedInstanceState) {
-		super.onSaveInstanceState(savedInstanceState);
 		// Save UI state changes to the savedInstanceState.
-		// This bundle will be passed to onCreate if the process is
-		// killed and restarted.
-		savedInstanceState.putParcelableArrayList("entries",
+		savedInstanceState.putParcelableArrayList("mEntries",
 				(ArrayList<ArticleOverviewEntry>) mEntries);
-		savedInstanceState.putInt("buttonVisibility", mButton.getVisibility());
-		savedInstanceState.putStringArray("paginationLinks", mPaginationLinks);
-		savedInstanceState.putInt("pageKey", mPageKey);
+		savedInstanceState.putStringArray("mPaginationLinks", mPaginationLinks);
+		savedInstanceState.putInt("mPageKey", mPageKey);
+		savedInstanceState.putString("state", state.name());
+
+		// Always call the superclass so it can save the view hierarchy state
+		super.onSaveInstanceState(savedInstanceState);
 	}
 
 	public void loadEntriesFromUrl(URL url) {
+		Log.v(TAG, "PageKey: " + mPageKey);
 
 		ArticleOverviewDownloadListener downloadListener = new ArticleOverviewDownloadListener(
 				mDbHelper, this);
 		mDownloadArticleTask = new DownloadArticleTask<List<ArticleOverviewEntry>>(
 				downloadListener, new ArticleOverviewHtmlParser());
 		mDownloadArticleTask.execute(url);
-	}
-
-	public void loadMoreEntries() {
-		String link = mPaginationLinks[++mPageKey];
-		URL url = null;
-		try {
-			url = new URL(link);
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
-		loadEntriesFromUrl(url);
 	}
 
 	public void displayEntries(List<ArticleOverviewEntry> entries) {
@@ -255,6 +260,16 @@ public class ArticleOverviewActivity extends Activity {
 			return true;
 		}
 		return false;
+	}
+
+	public URL getUrl(String src) {
+		URL url = null;
+		try {
+			url = new URL(src);
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+		return url;
 	}
 
 	public class ArticleOverviewEntryOnClickListener implements OnClickListener {

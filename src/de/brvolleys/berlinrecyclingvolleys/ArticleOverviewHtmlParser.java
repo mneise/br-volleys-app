@@ -27,16 +27,14 @@ public class ArticleOverviewHtmlParser implements
 
 		Document doc = null;
 		try {
-			doc = Jsoup.connect(url.toString()).timeout(5*1000).get();
+			doc = Jsoup.connect(url.toString()).timeout(5 * 1000).get();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		Log.v(TAG, "Doc: " + doc);
 		return parse(doc);
 	}
 
 	private List<ArticleOverviewEntry> parse(Document doc) {
-		Log.v(TAG, "Doc " + doc);
 		if (doc == null) {
 			return null;
 		}

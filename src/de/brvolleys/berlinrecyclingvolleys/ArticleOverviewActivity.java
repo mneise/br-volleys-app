@@ -6,20 +6,25 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewTreeObserver;
+import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -30,6 +35,7 @@ public class ArticleOverviewActivity extends Activity {
 	public final static String DOMAIN = "http://www.br-volleys.de";
 	public final static String START_URL = "http://br-volleys.de/index.php/br-volleys-archiv/artikel/2012-13.html";
 
+	private ScrollView mScrollView = null;
 	private List<ArticleOverviewEntry> mEntries = null;
 	private String[] mPaginationLinks = null;
 	private Integer mPageKey = 0;
@@ -50,11 +56,14 @@ public class ArticleOverviewActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_article_overview);
 
+		// get scrollView
+		mScrollView = (ScrollView) findViewById(R.id.scrollview);
+
 		// Initialize mDbHelper
 		mDbHelper = new ArticleOverviewEntryDbAdapter(this);
 
 		// Initialize mProgressView
-		mProgressView = (WebView) findViewById(R.id.webview_loading_spinner_entries);
+		mProgressView = (WebView) findViewById(R.id.webview_loading_spinner_article_overview);
 		mProgressView
 				.loadUrl("file:///android_asset/loading-spinner-overview.html");
 
@@ -67,6 +76,8 @@ public class ArticleOverviewActivity extends Activity {
 			}
 		});
 
+		float[] scrollPosition = null;
+
 		if (savedInstanceState != null) {
 			mEntries = savedInstanceState.getParcelableArrayList("mEntries");
 			mPaginationLinks = savedInstanceState
@@ -74,6 +85,8 @@ public class ArticleOverviewActivity extends Activity {
 			mPageKey = savedInstanceState.getInt("mPageKey");
 			state = Enum.valueOf(State.class,
 					savedInstanceState.getString("state"));
+			scrollPosition = savedInstanceState
+					.getFloatArray("mScrollPosition");
 		}
 
 		if (isConnected()) {
@@ -111,6 +124,41 @@ public class ArticleOverviewActivity extends Activity {
 			addNewEntries(entries);
 			displayEntries(entries);
 		}
+
+		if (scrollPosition != null) {
+			final float[] scrollPositionTmp = scrollPosition;
+			final RelativeLayout layout = (RelativeLayout) findViewById(R.id.relative_layout_article_overview);
+			ViewTreeObserver vto = layout.getViewTreeObserver();
+			vto.addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
+
+				@SuppressLint("NewApi")
+				@Override
+				public void onGlobalLayout() {
+					scroll(scrollPositionTmp, layout.getHeight());
+					ViewTreeObserver obs = layout.getViewTreeObserver();
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+						obs.removeOnGlobalLayoutListener(this);
+						Log.v(TAG, "Device is using API Level 16 or higher");
+					} else {
+						obs.removeGlobalOnLayoutListener(this);
+						Log.v(TAG, "Device is using API Level 15 or lower");
+					}
+				}
+
+			});
+
+		}
+	}
+
+	public void scroll(final float[] scrollPosition, int height) {
+		final int x = (int) scrollPosition[0];
+		final int y = (int) (scrollPosition[1] * height);
+		Runnable scroll = new Runnable() {
+			public void run() {
+				mScrollView.scrollTo(x, y);
+			}
+		};
+		mScrollView.post(scroll);
 	}
 
 	@Override
@@ -140,6 +188,11 @@ public class ArticleOverviewActivity extends Activity {
 		savedInstanceState.putStringArray("mPaginationLinks", mPaginationLinks);
 		savedInstanceState.putInt("mPageKey", mPageKey);
 		savedInstanceState.putString("state", state.name());
+		float height = mScrollView.getChildAt(0).getHeight();
+		float yPosition = mScrollView.getScrollY();
+		float percentage = yPosition / height;
+		savedInstanceState.putFloatArray("mScrollPosition", new float[] {
+				mScrollView.getScrollX(), percentage });
 
 		// Always call the superclass so it can save the view hierarchy state
 		super.onSaveInstanceState(savedInstanceState);

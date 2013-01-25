@@ -24,7 +24,6 @@ public class ArticleOverviewDownloadListener implements
 		mActivity.state = State.LOADING;
 		mActivity.disableButton();
 		mActivity.enableProgressView();
-		mActivity.scrollDown();
 	}
 
 	@Override

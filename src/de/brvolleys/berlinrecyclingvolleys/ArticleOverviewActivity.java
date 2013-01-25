@@ -246,16 +246,6 @@ public class ArticleOverviewActivity extends Activity {
 		layout.addView(entrylayout);
 	}
 
-	public void scrollDown() {
-		final ScrollView scrollview = (ScrollView) findViewById(R.id.scrollview);
-		scrollview.post(new Runnable() {
-			@Override
-			public void run() {
-				scrollview.fullScroll(View.FOCUS_DOWN);
-			}
-		});
-	}
-
 	public Boolean isAllowedToEnableButton() {
 		if (mPaginationLinks != null) {
 			if (mPageKey < mPaginationLinks.length - 1
